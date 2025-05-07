@@ -35,7 +35,7 @@ const onDonateButtonClicked = async() => {
 
   // if (withSubscription.value === false) {
   loadScript({
-    clientId: "INSERT_CLIENT_ID_HERE",
+    clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
     currency: "EUR"
   }).then((paypal) => {
     paypal.Buttons({

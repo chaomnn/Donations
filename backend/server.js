@@ -8,11 +8,15 @@ import {
     OrdersController
 } from "@paypal/paypal-server-sdk";
 import bodyParser from "body-parser";
-import cors from "cors";
+
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors());
 
 const {
     PAYPAL_CLIENT_ID,
@@ -26,7 +30,7 @@ const client = new Client({
         oAuthClientSecret: PAYPAL_CLIENT_SECRET,
     },
     timeout: 0,
-    environment: Environment.Sandbox,
+    environment: Environment.Production, // Environment.Sandbox
     logging: {
         logLevel: LogLevel.Info,
         logRequest: { logBody: true },
@@ -112,6 +116,13 @@ app.post("/api/orders/:orderID/capture", async (req, res) => {
     }
 });
 
+// Serve static assets
+app.use(express.static(path.join(__dirname, "dist")));
+
+// Catch-all only for frontend routing (non-API)
+app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 app.listen(PORT, () => {
     console.log(`Node server listening at http://localhost:${PORT}/`);
