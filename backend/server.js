@@ -116,6 +116,20 @@ app.post("/api/orders/:orderID/capture", async (req, res) => {
     }
 });
 
+app.post("/api/subscriptions", async (req, res) => {
+    try {
+        const {subscriptionID} = req.body;
+        if (!subscriptionID) {
+            return res.status(400).json({error: "Missing subscription ID"});
+        }
+        res.status(200).json({message: "Subscription created."});
+    } catch (error) {
+        console.error("Failed to create subscription:", error);
+        res.status(500).json({ error: "Failed to create subscription."});
+    }
+});
+
+
 // Serve static assets
 app.use(express.static(path.join(__dirname, "dist")));
 

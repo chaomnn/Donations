@@ -33,83 +33,145 @@ const onDonateButtonClicked = async() => {
   // Paypal
   isDonateButtonClicked.value = true
 
-  // if (withSubscription.value === false) {
-  loadScript({
-    clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
-    currency: "EUR"
-  }).then((paypal) => {
-    paypal.Buttons({
-      style: {
-        shape: "rect",
-        layout: "vertical",
-        color: "gold",
-        label: "paypal",
-      },
-      message: {
-        amount: 1,
-      },
+  if (withSubscription.value === false) {
+    // One-time payment
+    loadScript({
+      clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
+      currency: "EUR"
+    }).then((paypal) => {
+      paypal.Buttons({
+        style: {
+          shape: "rect",
+          layout: "vertical",
+          color: "gold",
+          label: "paypal",
+        },
+        message: {
+          amount: 1,
+        },
 
-      async createOrder() {
-        try {
-          const response = await fetch("/api/orders", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              amount: donationAmount.value,
-              email: email.value
-            }),
-          });
-          const orderData = await response.json();
-          if (orderData.id) {
-            return orderData.id;
+        async createOrder() {
+          try {
+            const response = await fetch("/api/orders", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                amount: donationAmount.value,
+                email: email.value
+              }),
+            });
+            const orderData = await response.json();
+            if (orderData.id) {
+              return orderData.id;
+            }
+            const errorDetail = orderData?.details?.[0];
+            const errorMessage = errorDetail
+                ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
+                : JSON.stringify(orderData);
+            console.error(errorMessage)
+            throw new Error(errorMessage);
+          } catch (error) {
+            console.error("Error creating order:", error);
           }
-          const errorDetail = orderData?.details?.[0];
-          const errorMessage = errorDetail
-              ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
-              : JSON.stringify(orderData);
-          console.error(errorMessage)
-          throw new Error(errorMessage);
-        } catch (error) {
-          console.error("Error creating order:", error);
-        }
-      },
+        },
 
-      async onApprove(data, actions) {
-        try {
-          const response = await fetch(
-              `/api/orders/${data.orderID}/capture`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              }
-          );
-          const orderData = await response.json();
-          const errorDetail = orderData?.details?.[0];
-          if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
-            return actions.restart();
-          } else if (errorDetail) {
-            throw new Error(
-                `${errorDetail.description} (${orderData.debug_id})`
+        async onApprove(data, actions) {
+          try {
+            const response = await fetch(
+                `/api/orders/${data.orderID}/capture`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                }
             );
-          } else if (!orderData.purchase_units) {
-            throw new Error(JSON.stringify(orderData));
-          } else {
-            console.log("Payment successful");
+            const orderData = await response.json();
+            const errorDetail = orderData?.details?.[0];
+            if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
+              return actions.restart();
+            } else if (errorDetail) {
+              throw new Error(
+                  `${errorDetail.description} (${orderData.debug_id})`
+              );
+            } else if (!orderData.purchase_units) {
+              throw new Error(JSON.stringify(orderData));
+            } else {
+              console.log("Payment successful");
+            }
+          } catch (error) {
+            console.error("Error capturing order:", error);
           }
-        } catch (error) {
-          console.error("Error capturing order:", error);
         }
-      }
 
-    }).render('#paypal-button-container')
-  }).catch((err) => {
-    console.error("failed to load the PayPal JS SDK script", err);
-  });
-  // }
+      }).render('#paypal-button-container')
+    }).catch((err) => {
+      console.error("failed to load the PayPal JS SDK script", err);
+    });
+  } else {
+    // Subscription
+    loadScript({
+      clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
+      vault: true,
+      intent: "subscription",
+      currency: "EUR"
+    }).then((paypal) => {
+      paypal.Buttons({
+        style: {
+          shape: "rect",
+          layout: "vertical",
+          color: "gold",
+          label: "paypal",
+        },
+        message: {
+          amount: 1,
+        },
+
+        async createSubscription(data, actions) {
+          return actions.subscription.create({
+            plan_id: import.meta.env.VITE_PAYPAL_PLAN_ID,
+          });
+        },
+
+        async onApprove(data, actions) {
+          try {
+            const response = await fetch(
+                `/api/subscriptions`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    subscriptionID: data.subscriptionID,
+                  }),
+                }
+            );
+            const orderData = await response.json();
+            const errorDetail = orderData?.details?.[0];
+            if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
+              return actions.restart();
+            } else if (errorDetail) {
+              throw new Error(
+                  `${errorDetail.description} (${orderData.debug_id})`
+              );
+            } else if (!orderData.purchase_units) {
+              throw new Error(JSON.stringify(orderData));
+            } else {
+              console.log("Payment successful");
+            }
+          } catch (error) {
+            console.error("Error capturing order:", error);
+          }
+        }
+
+      }).render('#paypal-button-container') // paypal.Buttons
+    }).catch((err) => {
+      console.error("failed to load the PayPal JS SDK script", err);
+    }); // then
+  }
 }
 
 function onClickCrypto() {
