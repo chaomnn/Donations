@@ -21,16 +21,18 @@ app.use(bodyParser.json());
 const {
     PAYPAL_CLIENT_ID,
     PAYPAL_CLIENT_SECRET,
-    PORT = 8080
+    PORT = 8080,
+    ENVIRONMENT
 } = process.env;
 
+const paypalEnv = ENVIRONMENT.toLowerCase() === "production" ? Environment.Production : Environment.Sandbox
 const client = new Client({
     clientCredentialsAuthCredentials: {
         oAuthClientId: PAYPAL_CLIENT_ID,
         oAuthClientSecret: PAYPAL_CLIENT_SECRET,
     },
     timeout: 0,
-    environment: Environment.Production, // Environment.Sandbox
+    environment: paypalEnv,
     logging: {
         logLevel: LogLevel.Info,
         logRequest: { logBody: true },

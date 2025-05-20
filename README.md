@@ -15,4 +15,5 @@ Back-end:
 2. Fill it with:
    PAYPAL_CLIENT_ID=YOUR_PAYPAL_CLIENT_ID_HERE
    PAYPAL_CLIENT_SECRET=YOUR_PAYPAL_CLIENT_SECRET_HERE
+   ENVIRONMENT=Sandbox (for testing) OR ENVIRONMENT=Production (for production)
 3. Open terminal in the root of backend/ directory and run "node server.js"
